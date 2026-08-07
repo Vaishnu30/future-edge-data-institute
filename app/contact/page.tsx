@@ -1,0 +1,2 @@
+import { BatchSchedule, ContactForm, ContactInfo, FAQ, GridHero, SiteFooter, SiteHeader } from '@/components/site'
+export default function ContactPage() { return <><SiteHeader /><main><GridHero label="Get in touch" title="Let&apos;s talk about your data career." description="Book a free counselling session, ask about a program, or just say hello. We typically respond within a few hours." /><BatchSchedule /><section className="container contact-layout"><ContactInfo /><ContactForm /></section><FAQ /></main><SiteFooter /></> }
