@@ -1,0 +1,16 @@
+'use client'
+
+import { useState } from 'react'
+import { Download, LogOut } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+type Row = { id: string; full_name: string; email: string; phone: string | null; interest: string | null; message: string | null; created_at: string }
+const columns = ['Name', 'Email', 'Phone', 'Interest', 'Message', 'Submitted']
+function csv(rows: Row[]) { const quote = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`; return [columns, ...rows.map((row) => [row.full_name, row.email, row.phone, row.interest, row.message, new Date(row.created_at).toLocaleString('en-IN')])].map((line) => line.map(quote).join(',')).join('\n') }
+function download(content: string, name: string, type: string) { const url = URL.createObjectURL(new Blob([content], { type })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url) }
+export default function SubmissionsDashboard({ initialRows, initialError }: { initialRows: Row[]; initialError: string | null }) {
+  const [rows] = useState(initialRows)
+  const [error] = useState(initialError)
+  async function signOut() { await createClient().auth.signOut(); window.location.href = '/admin/login' }
+  return <main className="admin-shell"><div className="admin-dashboard"><header className="admin-heading"><div><span className="label"><i />Admin portal</span><h1>Contact submissions</h1><p>Review inquiries submitted through the website.</p></div><div className="admin-actions"><button className="button button-secondary" onClick={() => download(csv(rows), 'contact-submissions.csv', 'text/csv;charset=utf-8')} disabled={!rows.length}><Download />CSV</button><button className="button button-secondary" onClick={() => download(`<html><body><table><tr>${columns.map((column) => `<th>${column}</th>`).join('')}</tr>${rows.map((row) => `<tr>${[row.full_name,row.email,row.phone,row.interest,row.message,new Date(row.created_at).toLocaleString('en-IN')].map((value) => `<td>${String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;')}</td>`).join('')}</tr>`).join('')}</table></body></html>`, 'contact-submissions.xls', 'application/vnd.ms-excel')} disabled={!rows.length}><Download />Excel</button><button className="icon-action" onClick={signOut} aria-label="Sign out"><LogOut /></button></div></header>{error ? <p className="admin-error" role="alert">Unable to load submissions. {error}</p> : <section className="submissions-card"><div className="submission-count"><strong>{rows.length}</strong><span>{rows.length === 1 ? 'submission' : 'submissions'}</span></div>{rows.length ? <div className="submission-table-wrap"><table className="submission-table"><thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td><strong>{row.full_name}</strong></td><td><a href={`mailto:${row.email}`}>{row.email}</a></td><td>{row.phone || '—'}</td><td>{row.interest || '—'}</td><td className="message-cell">{row.message || '—'}</td><td>{new Date(row.created_at).toLocaleDateString('en-IN')}</td></tr>)}</tbody></table></div> : <div className="submission-empty"><h2>No submissions yet</h2><p>New contact form messages will appear here.</p></div>}</section>}</div></main>
+}
