@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronDown, Clock3, Download, FileText, Mail, MapPin, Menu, Monitor, Phone, Send, Users, X } from 'lucide-react'
+
 
 export const programs = [
   { title: 'Python for Data Analytics', weeks: '8 weeks', level: 'Beginner', description: 'Master Python, Pandas, NumPy, and data visualization libraries used in every analytics role.' },
@@ -34,6 +36,53 @@ export function Counselling({ compact = false }: { compact?: boolean }) { return
 export function Brochure() { return <section className="aqua-band"><div className="container brochure"><div className="brochure-icon"><FileText size={48} /><span>PDF BROCHURE</span></div><div><Label>Free Download</Label><h2>Get Our Full Course Brochure</h2><p>Download our detailed brochure to explore the complete curriculum, batch schedules, fee structure, and placement support — everything you need to make an informed decision about your data career.</p><Button href="/contact">Download Brochure <Download size={17} /></Button><small>Free download · No sign-up required</small></div></div></section> }
 export function Journey() { return <section className="container journey-wrap"><div className="journey"><div><h2>Ready to start your data journey?</h2><p>Join hundreds of graduates who turned their career around with the right guidance.<br />Our next batch starts soon — let&apos;s talk about your goals.</p><small>Free 30-minute career counselling session. No commitment required.</small></div><div className="journey-actions"><Button href="/contact">Talk to a Mentor</Button><Button href="/courses" secondary>Browse Courses</Button></div></div></section> }
 export function ContactInfo() { const data = [[Phone,'PHONE','+91 8668962548'],[Mail,'EMAIL','futureedgedata.institute@gmail.com'],[MapPin,'LOCATION','Future Edge Data Institute, solapur, Maharashtra'],[Clock3,'OFFICE HOURS','Mon – Sat, 9 AM – 7 PM IST']]; return <div className="info-list">{data.map(([Icon,title,value]) => <div className="info-card" key={title as string}><span className="icon-box"><Icon /></span><div><small>{title as string}</small><strong>{value as string}</strong></div></div>)}</div> }
-export function ContactForm() { return <form className="contact-form" onSubmit={(e) => e.preventDefault()}><h2>Send us a message</h2><p>Fill in the form and we&apos;ll get back to you within 24 hours.</p><div className="form-grid"><label>Full name *<input placeholder="Your full name" required /></label><label>Email address *<input type="email" placeholder="you@example.com" required /></label><label>Phone number<input placeholder="+91 98765 43210" /></label><label>I&apos;m interested in<select defaultValue=""><option value="" disabled>Select a program...</option><option>Data Science & Analytics</option><option>Python for Data Analytics</option></select></label></div><label>Message<textarea placeholder="Tell us a bit about your background and what you&apos;re hoping to achieve." rows={4} /></label><button className="button button-primary submit"><Send size={18} /> Send message</button></form> }
+export function ContactForm() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setIsSubmitting(true)
+    setStatus('idle')
+
+    const form = event.currentTarget
+    const values = new FormData(form)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    const { error } = await supabase.from('contact_submissions').insert({
+      full_name: String(values.get('full_name') || '').trim(),
+      email: String(values.get('email') || '').trim(),
+      phone: String(values.get('phone') || '').trim() || null,
+      interest: String(values.get('interest') || '').trim() || null,
+      message: String(values.get('message') || '').trim() || null,
+    })
+
+    setIsSubmitting(false)
+    if (error) {
+      setStatus('error')
+      return
+    }
+
+    form.reset()
+    setStatus('success')
+  }
+
+  return <form className="contact-form" onSubmit={handleSubmit}>
+    <h2>Send us a message</h2>
+    <p>Fill in the form and we&apos;ll get back to you within 24 hours.</p>
+    <div className="form-grid">
+      <label>Full name *<input name="full_name" placeholder="Your full name" required /></label>
+      <label>Email address *<input name="email" type="email" placeholder="you@example.com" required /></label>
+      <label>Phone number<input name="phone" placeholder="+91 98765 43210" /></label>
+      <label>I&apos;m interested in<select name="interest" defaultValue=""><option value="" disabled>Select a program...</option><option>Data Science &amp; Analytics</option><option>Python for Data Analytics</option></select></label>
+    </div>
+    <label>Message<textarea name="message" placeholder="Tell us a bit about your background and what you&apos;re hoping to achieve." rows={4} /></label>
+    {status === 'success' && <p role="status">Thanks — your message has been received.</p>}
+    {status === 'error' && <p role="alert">We couldn&apos;t send your message. Please try again.</p>}
+    <button className="button button-primary submit" disabled={isSubmitting}><Send size={18} /> {isSubmitting ? 'Sending...' : 'Send message'}</button>
+  </form>
+}
 export function FAQ() { const [open, setOpen] = useState<number | null>(null); const questions = ['Do I need prior coding experience to join?','Are classes online or offline?','What does the placement support look like?','When does the next batch start?','Is there an EMI or instalment option?']; return <section className="faq-band"><div className="narrow"><Label>Common questions</Label><h2>Things people usually ask us.</h2>{questions.map((q,i) => <div className={`faq-row ${open === i ? 'open' : ''}`} key={q}><button onClick={() => setOpen(open === i ? null : i)}>{q}<ChevronDown size={18} /></button>{open === i && <p>We&apos;re happy to guide you. Talk to our counsellors and we&apos;ll help you understand the right next step.</p>}</div>)}</div></section> }
 export function BatchSchedule() { const batches = [['1 September 2026','Data Science & Analytics (6 months)','12 seats remaining','Open'],['15 September 2026','Python for Data Analytics (8 weeks)','8 seats remaining','Open'],['1 October 2026','Power BI & Tableau (6 weeks)','Limited seats','Filling fast'],['Every 4–6 weeks','SQL & Machine Learning specializations','Flexible cohorts','Rolling intake']]; return <section className="aqua-band"><div className="container"><Label>Upcoming batches</Label><h2>Upcoming batch schedule</h2><div className="batch-grid">{batches.map(([date,name,seats,status]) => <article className="batch-card" key={date}><small><CalendarDays /> {status === 'Rolling intake' ? 'ROLLING INTAKE' : 'NEXT START'}</small><h3>{date}</h3><strong>{name}</strong><p><Users size={15} /> {seats}</p><span className={status === 'Filling fast' ? 'status warm' : 'status'}>{status}</span></article>)}</div></div></section> }
